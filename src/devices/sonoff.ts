@@ -21,7 +21,6 @@ import {
     numeric,
     occupancy,
     onOff,
-    ota,
     temperature,
 } from '../lib/modernExtend';
 import * as reporting from '../lib/reporting';
@@ -683,7 +682,8 @@ const definitions: DefinitionWithExtend[] = [
         model: 'ZBMINI-L',
         vendor: 'SONOFF',
         description: 'Zigbee smart switch (no neutral)',
-        extend: [onOff(), ota()],
+        extend: [onOff()],
+        ota: true,
         configure: async (device, coordinatorEndpoint) => {
             // Unbind genPollCtrl to prevent device from sending checkin message.
             // Zigbee-herdsmans responds to the checkin message which causes the device
@@ -702,7 +702,8 @@ const definitions: DefinitionWithExtend[] = [
         model: 'ZBMINIL2',
         vendor: 'SONOFF',
         description: 'Zigbee smart switch (no neutral)',
-        extend: [onOff(), ota()],
+        extend: [onOff()],
+        ota: true,
         configure: async (device, coordinatorEndpoint) => {
             // Unbind genPollCtrl to prevent device from sending checkin message.
             // Zigbee-herdsmans responds to the checkin message which causes the device
@@ -923,7 +924,8 @@ const definitions: DefinitionWithExtend[] = [
         model: 'S40ZBTPB',
         vendor: 'SONOFF',
         description: '15A Zigbee smart plug',
-        extend: [onOff({powerOnBehavior: false, skipDuplicateTransaction: true}), ota()],
+        extend: [onOff({powerOnBehavior: false, skipDuplicateTransaction: true})],
+        ota: true,
     },
     {
         zigbeeModel: ['DONGLE-E_R'],
@@ -968,8 +970,8 @@ const definitions: DefinitionWithExtend[] = [
                 voltageReporting: true,
                 voltageReportingConfig: {min: 3600, max: 7200, change: 0},
             }),
-            ota(),
         ],
+        ota: true,
     },
     {
         zigbeeModel: ['SNZB-02P'],
@@ -995,9 +997,9 @@ const definitions: DefinitionWithExtend[] = [
                 zigbeeCommandOptions: {manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_COOLKIT_TECHNOLOGY_CO_LTD},
                 access: 'STATE_GET',
             }),
-            ota(),
             ewelinkBattery(),
         ],
+        ota: true,
     },
     {
         zigbeeModel: ['SNZB-03P'],
@@ -1010,7 +1012,7 @@ const definitions: DefinitionWithExtend[] = [
                 name: 'motion_timeout',
                 cluster: 0x0406,
                 attribute: {ID: 0x0020, type: 0x21},
-                description: 'Unoccupied to occupied delay',
+                description: 'Occupied to unoccupied delay',
                 valueMin: 5,
                 valueMax: 60,
             }),
@@ -1023,9 +1025,9 @@ const definitions: DefinitionWithExtend[] = [
                 description: 'Only updated when occupancy is detected',
                 access: 'STATE',
             }),
-            ota(),
             ewelinkBattery(),
         ],
+        ota: true,
     },
     {
         zigbeeModel: ['SNZB-05P'],
@@ -1065,8 +1067,8 @@ const definitions: DefinitionWithExtend[] = [
                 zigbeeCommandOptions: {manufacturerCode: Zcl.ManufacturerCode.SHENZHEN_COOLKIT_TECHNOLOGY_CO_LTD},
                 access: 'STATE',
             }),
-            ota(),
         ],
+        ota: true,
     },
     {
         zigbeeModel: ['TRVZB'],
@@ -1218,8 +1220,8 @@ const definitions: DefinitionWithExtend[] = [
             }),
             sonoffExtend.weeklySchedule(),
             customTimeResponse('1970_UTC'),
-            ota(),
         ],
+        ota: true,
         configure: async (device, coordinatorEndpoint) => {
             const endpoint = device.getEndpoint(1);
             await reporting.bind(endpoint, coordinatorEndpoint, ['hvacThermostat']);
@@ -1252,7 +1254,6 @@ const definitions: DefinitionWithExtend[] = [
         fromZigbee: [fz.flow],
         exposes: [e.numeric('flow', ea.STATE).withDescription('Current water flow').withUnit('m³/h')],
         extend: [
-            ota(),
             battery(),
             onOff({
                 powerOnBehavior: false,
@@ -1280,6 +1281,7 @@ const definitions: DefinitionWithExtend[] = [
             sonoffExtend.cyclicTimedIrrigation(),
             sonoffExtend.cyclicQuantitativeIrrigation(),
         ],
+        ota: true,
         configure: async (device, coordinatorEndpoint) => {
             const endpoint = device.getEndpoint(1);
             await reporting.bind(endpoint, coordinatorEndpoint, ['genPowerCfg', 'genOnOff']);
@@ -1294,7 +1296,6 @@ const definitions: DefinitionWithExtend[] = [
         vendor: 'SONOFF',
         description: 'Zigbee USB repeater plug',
         extend: [
-            ota(),
             onOff(),
             sonoffExtend.addCustomClusterEwelink(),
             binary({
@@ -1308,6 +1309,7 @@ const definitions: DefinitionWithExtend[] = [
             }),
             sonoffExtend.inchingControlSet(),
         ],
+        ota: true,
         configure: async (device, coordinatorEndpoint) => {
             const endpoint = device.getEndpoint(1);
             await reporting.bind(endpoint, coordinatorEndpoint, ['genOnOff']);
@@ -1323,9 +1325,16 @@ const definitions: DefinitionWithExtend[] = [
         exposes: [],
         extend: [
             commandsOnOff({commands: ['toggle']}),
-            ota(),
-            onOff(),
+            onOff({configureReporting: false}),
             sonoffExtend.addCustomClusterEwelink(),
+            binary({
+                name: 'network_indicator',
+                cluster: 'customClusterEwelink',
+                attribute: 'networkLed',
+                description: 'Network indicator Settings, turn off/turn on the online network indicator.',
+                valueOff: [false, 0],
+                valueOn: [true, 1],
+            }),
             binary({
                 name: 'turbo_mode',
                 cluster: 'customClusterEwelink',
@@ -1364,11 +1373,12 @@ const definitions: DefinitionWithExtend[] = [
             sonoffExtend.externalSwitchTriggerMode(),
             sonoffExtend.inchingControlSet(),
         ],
+        ota: true,
         configure: async (device, coordinatorEndpoint) => {
             const endpoint = device.getEndpoint(1);
             await reporting.bind(endpoint, coordinatorEndpoint, ['genOnOff', 'customClusterEwelink']);
             await reporting.onOff(endpoint, {min: 1, max: 1800, change: 0});
-            await endpoint.read('customClusterEwelink', ['radioPower', 0x0014, 0x0015, 0x0016, 0x0017], defaultResponseOptions);
+            await endpoint.read('customClusterEwelink', ['radioPower', 0x0001, 0x0014, 0x0015, 0x0016, 0x0017], defaultResponseOptions);
         },
     },
     {
@@ -1377,9 +1387,9 @@ const definitions: DefinitionWithExtend[] = [
         vendor: 'SONOFF',
         description: 'Zigbee Smart one-channel wall switch (type 120).',
         exposes: [],
+        ota: true,
         extend: [
             deviceEndpoints({endpoints: {l1: 1}}),
-            ota(),
             onOff(),
             sonoffExtend.addCustomClusterEwelink(),
             enumLookup({
@@ -1414,9 +1424,9 @@ const definitions: DefinitionWithExtend[] = [
         vendor: 'SONOFF',
         description: 'Zigbee Smart two-channel wall switch (type 120).',
         exposes: [],
+        ota: true,
         extend: [
             deviceEndpoints({endpoints: {l1: 1, l2: 2}}),
-            ota(),
             onOff({endpointNames: ['l1', 'l2']}),
             sonoffExtend.addCustomClusterEwelink(),
             enumLookup({
@@ -1455,9 +1465,9 @@ const definitions: DefinitionWithExtend[] = [
         vendor: 'SONOFF',
         description: 'Zigbee Smart three-channel wall switch (type 120).',
         exposes: [],
+        ota: true,
         extend: [
             deviceEndpoints({endpoints: {l1: 1, l2: 2, l3: 3}}),
-            ota(),
             onOff({endpointNames: ['l1', 'l2', 'l3']}),
             sonoffExtend.addCustomClusterEwelink(),
             enumLookup({

@@ -4,7 +4,6 @@ import fz from '../converters/fromZigbee';
 import tz from '../converters/toZigbee';
 import * as constants from '../lib/constants';
 import * as exposes from '../lib/exposes';
-import * as legacy from '../lib/legacy';
 import {
     battery,
     commandsLevelCtrl,
@@ -13,6 +12,7 @@ import {
     deviceEndpoints,
     electricityMeter,
     enumLookup,
+    iasZoneAlarm,
     identify,
     illuminance,
     light,
@@ -22,8 +22,8 @@ import {
     onOff,
     ScaleFunction,
     setupConfigureForReading,
+    temperature,
 } from '../lib/modernExtend';
-import * as ota from '../lib/ota';
 import * as reporting from '../lib/reporting';
 import {DefinitionWithExtend, Fz, KeyValue, ModernExtend, Tz} from '../lib/types';
 import * as utils from '../lib/utils';
@@ -614,8 +614,8 @@ const definitions: DefinitionWithExtend[] = [
             fz.ignore_haDiagnostic,
             fz.ignore_genOta,
             fz.ignore_zclversion_read,
-            legacy.fz.wiser_thermostat,
-            legacy.fz.wiser_itrv_battery,
+            fz.thermostat,
+            fz.battery,
             fz.hvac_user_interface,
             fz.wiser_device_info,
         ],
@@ -663,7 +663,7 @@ const definitions: DefinitionWithExtend[] = [
         model: 'CCT5010-0001',
         vendor: 'Schneider Electric',
         description: 'Micro module dimmer',
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [light({configureReporting: true, levelConfig: {}})],
         fromZigbee: [fz.wiser_lighting_ballast_configuration],
         toZigbee: [tz.ballast_config, tz.wiser_dimmer_mode],
@@ -689,7 +689,7 @@ const definitions: DefinitionWithExtend[] = [
         model: 'CCT5011-0001/CCT5011-0002/MEG5011-0001',
         vendor: 'Schneider Electric',
         description: 'Micro module switch',
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [onOff({powerOnBehavior: false})],
         whiteLabel: [{vendor: 'Elko', model: 'EKO07144'}],
     },
@@ -698,7 +698,7 @@ const definitions: DefinitionWithExtend[] = [
         model: 'CCT5010-0003',
         vendor: 'Schneider Electric',
         description: 'Micro module dimmer with neutral lead',
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [light({configureReporting: true, levelConfig: {}})],
         fromZigbee: [fz.wiser_lighting_ballast_configuration],
         toZigbee: [tz.ballast_config, tz.wiser_dimmer_mode],
@@ -879,7 +879,7 @@ const definitions: DefinitionWithExtend[] = [
                 .withValueMax(254)
                 .withDescription('Specifies the maximum light output of the ballast'),
         ],
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [indicatorMode('smart')],
         meta: {multiEndpoint: true},
         configure: async (device, coordinatorEndpoint) => {
@@ -897,7 +897,7 @@ const definitions: DefinitionWithExtend[] = [
         model: '41E2PBSWMZ/356PB2MBTZ',
         vendor: 'Schneider Electric',
         description: 'Wiser 40/300-Series module switch 2AX',
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [onOff({powerOnBehavior: false}), indicatorMode('smart')],
         meta: {multiEndpoint: true},
         configure: async (device, coordinatorEndpoint) => {
@@ -914,7 +914,7 @@ const definitions: DefinitionWithExtend[] = [
         model: '41E10PBSWMZ-VW',
         vendor: 'Schneider Electric',
         description: 'Wiser 40/300-Series module switch 10AX with ControlLink',
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [onOff({powerOnBehavior: false}), indicatorMode('smart')],
         meta: {multiEndpoint: true},
         configure: async (device, coordinatorEndpoint) => {
@@ -934,7 +934,7 @@ const definitions: DefinitionWithExtend[] = [
         fromZigbee: [fz.fan],
         toZigbee: [tzLocal.fan_mode],
         exposes: [e.fan().withModes(['off', 'low', 'medium', 'high', 'on'])],
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [fanIndicatorMode(), fanIndicatorOrientation()],
         configure: async (device, coordinatorEndpoint) => {
             const endpoint = device.getEndpoint(7);
@@ -990,8 +990,8 @@ const definitions: DefinitionWithExtend[] = [
             fz.ignore_haDiagnostic,
             fz.ignore_genOta,
             fz.ignore_zclversion_read,
-            legacy.fz.wiser_thermostat,
-            legacy.fz.wiser_itrv_battery,
+            fz.thermostat,
+            fz.battery,
             fz.hvac_user_interface,
             fz.wiser_device_info,
         ],
@@ -1673,14 +1673,14 @@ const definitions: DefinitionWithExtend[] = [
             await reporting.batteryPercentageRemaining(endpoint);
             await reporting.illuminance(endpoint, {min: 15, max: constants.repInterval.HOUR, change: 500});
         },
-        exposes: [e.battery(), e.illuminance(), e.illuminance_lux(), e.occupancy()],
+        exposes: [e.battery(), e.illuminance(), e.occupancy()],
     },
     {
         zigbeeModel: ['CH/Socket/2'],
         model: '3025CSGZ',
         vendor: 'Schneider Electric',
         description: 'Dual connected smart socket',
-        ota: ota.zigbeeOTA,
+        ota: true,
         extend: [deviceEndpoints({endpoints: {l1: 1, l2: 2}}), onOff({endpointNames: ['l1', 'l2']})],
     },
     {
@@ -1727,32 +1727,32 @@ const definitions: DefinitionWithExtend[] = [
         model: 'W599001',
         vendor: 'Schneider Electric',
         description: 'Wiser smoke alarm',
-        fromZigbee: [fz.temperature, fz.battery, fz.ias_enroll, fz.ias_smoke_alarm_1],
-        toZigbee: [],
-        ota: ota.zigbeeOTA, // local OTA updates are untested
-        exposes: [
-            e.smoke(),
-            e.test(),
-            e.battery_low(),
-            e.tamper(),
-            e.battery(),
-            e.battery_voltage(),
-            // the temperature readings are unreliable and may need more investigation.
-            e.temperature(),
+        extend: [
+            battery({voltage: true, voltageReporting: true}),
+            temperature(),
+            iasZoneAlarm({
+                zoneType: 'smoke',
+                zoneAttributes: ['alarm_1', 'tamper', 'battery_low', 'test'],
+                zoneStatusReporting: true,
+                manufacturerZoneAttributes: [
+                    {
+                        bit: 1,
+                        name: 'heat',
+                        valueOn: true,
+                        valueOff: false,
+                        description: 'Indicates whether the device has detected high temperature',
+                    },
+                    {
+                        bit: 11,
+                        name: 'hush',
+                        valueOn: true,
+                        valueOff: false,
+                        description: 'Indicates whether the device is in hush mode',
+                        entityCategory: 'diagnostic',
+                    },
+                ],
+            }),
         ],
-        configure: async (device, coordinatorEndpoint) => {
-            const endpoint = device.getEndpoint(20);
-            const binds = ['msTemperatureMeasurement', 'ssIasZone', 'genPowerCfg'];
-            await reporting.bind(endpoint, coordinatorEndpoint, binds);
-            await reporting.batteryPercentageRemaining(endpoint);
-            await reporting.batteryVoltage(endpoint);
-            await reporting.temperature(endpoint);
-            await endpoint.read('msTemperatureMeasurement', ['measuredValue']);
-            await endpoint.read('ssIasZone', ['iasCieAddr', 'zoneState', 'zoneStatus', 'zoneId']);
-            await endpoint.read('genPowerCfg', ['batteryVoltage', 'batteryPercentageRemaining']);
-            device.powerSource = 'Mains (single phase)';
-            device.save();
-        },
         whiteLabel: [
             {vendor: 'Schneider Electric', model: 'W599501', description: 'Wiser smoke alarm', fingerprint: [{modelID: 'W599501'}]},
             {vendor: 'Schneider Electric', model: '755WSA', description: 'Clipsal Wiser smoke alarm', fingerprint: [{modelID: '755WSA'}]},
@@ -2129,6 +2129,95 @@ const definitions: DefinitionWithExtend[] = [
             {vendor: 'Exxact', model: 'WDE002962'},
             {vendor: 'Exxact', model: 'WDE003962'},
         ],
+    },
+    {
+        zigbeeModel: ['NHMOTION/UNIDIM/1'],
+        model: 'NHMOTION/UNIDIM/1',
+        vendor: 'Schneider Electric',
+        description: 'Motion sensor with dimmer',
+        extend: [
+            light({
+                effect: false,
+                powerOnBehavior: false,
+                color: false,
+                configureReporting: true,
+                levelConfig: {
+                    disabledFeatures: ['on_off_transition_time', 'on_transition_time', 'off_transition_time', 'execute_if_off'],
+                },
+            }),
+            lightingBallast(),
+            illuminance(),
+            occupancy({
+                pirConfig: ['otu_delay'],
+            }),
+            schneiderElectricExtend.addOccupancyConfigurationCluster(),
+            schneiderElectricExtend.occupancyConfiguration(),
+            schneiderElectricExtend.dimmingMode(),
+        ],
+        whiteLabel: [
+            {vendor: 'ELKO', model: 'EKO06984', description: 'SmartPir with push dimmer'},
+            {vendor: 'ELKO', model: 'EKO06985', description: 'SmartPir with push dimmer'},
+            {vendor: 'ELKO', model: 'EKO06986', description: 'SmartPir with push dimmer'},
+        ],
+    },
+    {
+        zigbeeModel: ['S520619'],
+        model: 'S520619',
+        vendor: 'Schneider Electric',
+        description: 'Wiser Odace Smart thermostat',
+        fromZigbee: [
+            fz.stelpro_thermostat,
+            fz.metering,
+            fz.schneider_pilot_mode,
+            fz.wiser_device_info,
+            fz.hvac_user_interface,
+            fz.temperature,
+            fz.occupancy,
+        ],
+        toZigbee: [
+            tz.thermostat_occupied_heating_setpoint,
+            tz.thermostat_system_mode,
+            tz.thermostat_local_temperature,
+            tz.thermostat_control_sequence_of_operation,
+            tz.schneider_pilot_mode,
+            tz.schneider_thermostat_keypad_lockout,
+            tz.thermostat_temperature_display_mode,
+        ],
+        exposes: [
+            e.binary('keypad_lockout', ea.STATE_SET, 'lock1', 'unlock').withDescription('Enables/disables physical input on the device'),
+            e.enum('schneider_pilot_mode', ea.ALL, ['contactor', 'pilot']).withDescription('Controls piloting mode'),
+            e
+                .enum('temperature_display_mode', ea.ALL, ['celsius', 'fahrenheit'])
+                .withDescription('The temperature format displayed on the thermostat screen'),
+            e
+                .climate()
+                .withSetpoint('occupied_heating_setpoint', 4, 30, 0.5)
+                .withLocalTemperature()
+                .withSystemMode(['off', 'heat', 'cool'])
+                .withPiHeatingDemand(),
+            e.temperature(),
+            e.occupancy(),
+        ],
+        configure: async (device, coordinatorEndpoint) => {
+            const endpoint1 = device.getEndpoint(1);
+            const endpoint2 = device.getEndpoint(2);
+            const endpoint4 = device.getEndpoint(4);
+            await reporting.bind(endpoint1, coordinatorEndpoint, ['hvacThermostat']);
+            await reporting.thermostatPIHeatingDemand(endpoint1);
+            await reporting.thermostatOccupiedHeatingSetpoint(endpoint1);
+            await reporting.temperature(endpoint2);
+            await endpoint1.read('hvacUserInterfaceCfg', ['keypadLockout', 'tempDisplayMode']);
+            await reporting.bind(endpoint4, coordinatorEndpoint, ['msOccupancySensing']);
+            await reporting.thermostatOccupancy(endpoint4);
+        },
+        options: [exposes.options.measurement_poll_interval()],
+        onEvent: async (type, data, device, options) => {
+            const endpoint = device.getEndpoint(1);
+            const poll = async () => {
+                await endpoint.read('hvacThermostat', ['occupiedHeatingSetpoint']);
+            };
+            utils.onEventPoll(type, data, device, options, 'measurement', 20, poll);
+        },
     },
 ];
 
